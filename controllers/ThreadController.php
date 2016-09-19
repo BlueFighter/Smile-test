@@ -8,6 +8,7 @@ use app\models\GenerateForm;
 use yii\web\Controller;
 use app\components\TreeAdapter;
 use app\components\NestedSetsJsonAdapter;
+use yii\helpers\ArrayHelper;
 
 
 class ThreadController extends Controller
@@ -63,29 +64,37 @@ class ThreadController extends Controller
                         ->orderBy('left_key')
                         ->asArray()
                         ->all();
-                if(count($ar_root) == count($ar_tread))
-                {
-                    $parent = NestedSets::find()
-                        ->where(['<', 'left_key' , $ar_root[0]['left_key']])
-                        ->andWhere(['>', 'right_key', $ar_root[count($ar_root)-1]['right_key']])
-                        ->andWhere(['depth_level' => $ar_root[0]['depth_level'] -1])
-                        ->andWhere(['depth_level' => $ar_root[count($ar_root)-1]['depth_level'] -1])
-                        ->asArray()
-                        ->one();
-                    if(is_array($parent))
-                    {
-                        $res_query[] = $parent;
-                        foreach ($ar_root as $root)
-                        {
-                            $query = NestedSets::find()
-                                ->where(['>=', 'left_key', $root['left_key']])
-                                ->andWhere(['<=', 'right_key', $root['right_key']])
-                                ->orderBy('left_key')
-                                ->asArray()
-                                ->all();
-                            $res_query = array_merge($res_query, $query);
+                if(count($ar_root) == count($ar_tread)) {
+                    $levels = ArrayHelper::getColumn($ar_root, 'depth_level');
+                    $first_level = array_shift($levels);
+                    $flag = true;
+                    foreach ($levels as $level) {
+                        if ($level != $first_level) {
+                            $flag = false;
+                            break;
                         }
-                        $query = $res_query;
+                    }
+                    if ($flag === true) {
+                        $parent = NestedSets::find()
+                            ->where(['<', 'left_key', $ar_root[0]['left_key']])
+                            ->andWhere(['>', 'right_key', $ar_root[count($ar_root) - 1]['right_key']])
+                            ->andWhere(['depth_level' => $ar_root[0]['depth_level'] - 1])
+                            ->andWhere(['depth_level' => $ar_root[count($ar_root) - 1]['depth_level'] - 1])
+                            ->asArray()
+                            ->one();
+                        if (is_array($parent)) {
+                            $res_query[] = $parent;
+                            foreach ($ar_root as $root) {
+                                $query = NestedSets::find()
+                                    ->where(['>=', 'left_key', $root['left_key']])
+                                    ->andWhere(['<=', 'right_key', $root['right_key']])
+                                    ->orderBy('left_key')
+                                    ->asArray()
+                                    ->all();
+                                $res_query = array_merge($res_query, $query);
+                            }
+                            $query = $res_query;
+                        }
                     }
                 }
             }
